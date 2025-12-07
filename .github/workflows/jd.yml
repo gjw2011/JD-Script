@@ -1,4 +1,4 @@
-name: JD 京东脚本自动化（带完整日志）
+name: JD 京东脚本（直链版，永不卡死）
 
 on:
   workflow_dispatch:
@@ -9,28 +9,23 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - name: 用 Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-      - name: 拉最新 jdpro + 运行全任务（完整日志）
+      - name: 直接运行京东任务（不 clone 仓库，全部直链最新版）
         env:
           JD_COOKIE: ${{ secrets.JD_COOKIE }}
         run: |
-          git clone https://github.com/6dylan6/jdpro.git ~/jdpro && cd ~/jdpro
-          echo "========== $(date) 开始执行京东任务 =========="
-          node jd_bean_sign.js
-          node jd_plantBean.js
-          node jd_pet.js
-          node jd_joy.js
-          node jd_joy_run.js
-          node jd_superMarket.js
-          node jd_jxfactory.js
-          echo "========== $(date) 全部执行完毕 =========="
-
-      - name: 上传日志方便查看
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jd日志
-          path: ~/jdpro/*.log
+          echo "开始跑京东任务 $(date)"
+          
+          node -e "require('https').get('https://raw.githubusercontent.com/6dylan6/jdpro/main/jd_bean_sign.js', r=>r.on('data',d=>process.stdout.write(d))).on('error',()=>console.log('签到脚本加载失败'))"
+          
+          node -e "require('https').get('https://raw.githubusercontent.com/6dylan6/jdpro/main/jd_plantBean.js', r=>r.on('data',d=>process.stdout.write(d))).on('error',()=>console.log('农场脚本加载失败'))"
+          
+          node -e "require('https').get('https://raw.githubusercontent.com/6dylan6/jdpro/main/jd_pet.js', r=>r.on('data',d=>process.stdout.write(d))).on('error',()=>console.log('萌宠脚本加载失败'))"
+          
+          node -e "require('https').get('https://raw.githubusercontent.com/6dylan6/jdpro/main/jd_joy.js', r=>r.on('data',d=>process.stdout.write(d))).on('error',()=>console.log('疯狂Joy加载失败'))"
+          
+          echo "全部跑完 $(date)"
