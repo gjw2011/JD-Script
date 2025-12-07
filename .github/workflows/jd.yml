@@ -1,47 +1,36 @@
-name: JD 京东脚本自动化
+name: JD 京东脚本自动化（带完整日志）
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0,6,12,18 * * *'   # 北京时间 8点、14点、20点、2点，每天4次
+    - cron: '0 0,6,12,18 * * *'
 
 jobs:
-  jd:
+  run:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
 
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: 拉取最新 jdpro 脚本
-        run: git clone -b main https://github.com/6dylan6/jdpro.git ~/jdpro
-
-      - name: 安装依赖（如果有）
-        run: cd ~/jdpro && npm install --force || echo "无依赖或已跳过"
-
-      - name: 执行京东全套任务
+      - name: 拉最新 jdpro + 运行全任务（完整日志）
         env:
           JD_COOKIE: ${{ secrets.JD_COOKIE }}
         run: |
-          cd ~/jdpro
-          echo "========== 开始运行京东脚本 =========="
-          node jd_bean_sign.js        || true   # 签到领京豆
-          node jd_plantBean.js        || true   # 东东农场
-          node jd_pet.js              || true   # 东东萌宠
-          node jd_joy.js              || true   # 疯狂Joy
-          node jd_superMarket.js      || true   # 东东超市
-          node jd_dreamFactory.js     || true   # 京喜工厂
-          node jd_jdzz.js             || true   # 京喜财富岛
-          node jd_crazy_joy.js        || true   # 疯狂的Joy
-          echo "========== 全部执行完毕 =========="
+          git clone https://github.com/6dylan6/jdpro.git ~/jdpro && cd ~/jdpro
+          echo "========== $(date) 开始执行京东任务 =========="
+          node jd_bean_sign.js
+          node jd_plantBean.js
+          node jd_pet.js
+          node jd_joy.js
+          node jd_joy_run.js
+          node jd_superMarket.js
+          node jd_jxfactory.js
+          echo "========== $(date) 全部执行完毕 =========="
 
-      - name: 上传日志（方便查看）
+      - name: 上传日志方便查看
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jd-logs
+          name: jd日志
           path: ~/jdpro/*.log
