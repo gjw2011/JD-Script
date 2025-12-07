@@ -1,56 +1,47 @@
 name: JD 京东脚本自动化
 
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:
   schedule:
-    - cron: '0 0,8,16,20 * * *'  # 每天北京时间 8:00, 16:00, 0:00, 4:00 自动跑
+    - cron: '0 0,6,12,18 * * *'   # 北京时间 8点、14点、20点、2点，每天4次
 
 jobs:
-  run-jd:
+  jd:
     runs-on: ubuntu-latest
-    if: github.event.repository.fork  # 只在 Fork 仓库运行
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'  # 京东脚本推荐 Node 20
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    - name: Install dependencies
-      run: |
-        npm install -g pnpm  # 用 pnpm 更快
-        cd ..  # 进入根目录
-        git clone https://github.com/6dylan6/jdpro.git temp_jdpro
-        cd temp_jdpro
-        pnpm install  # 安装所有依赖（如果有 package.json）
+      - name: 拉取最新 jdpro 脚本
+        run: git clone -b main https://github.com/6dylan6/jdpro.git ~/jdpro
 
-    - name: Run JD scripts
-      env:
-        JD_COOKIE: ${{ secrets.JD_COOKIE }}
-      run: |
-        cd temp_jdpro
-        # 验证 Cookie
-        node jd_cookie.js || echo "Cookie 验证跳过"
-        
-        # 核心任务（京东签到、农场、萌宠等）
-        node jd_bean_sign.js  # 京豆签到
-        node jd_plantBean.js  # 东东农场
-        node jd_pet.js        # 东东萌宠
-        node jd_joy.js        # 疯狂的Joy
-        node jd_superMarket.js # 超市
-        # 加更多任务：node jd_dreamFactory.js 等
-        
-        # 清理临时目录
-        cd .. && rm -rf temp_jdpro
+      - name: 安装依赖（如果有）
+        run: cd ~/jdpro && npm install --force || echo "无依赖或已跳过"
 
-    - name: Upload logs
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: jd-logs
-        path: |
-          *.log
-          /tmp/*.log
+      - name: 执行京东全套任务
+        env:
+          JD_COOKIE: ${{ secrets.JD_COOKIE }}
+        run: |
+          cd ~/jdpro
+          echo "========== 开始运行京东脚本 =========="
+          node jd_bean_sign.js        || true   # 签到领京豆
+          node jd_plantBean.js        || true   # 东东农场
+          node jd_pet.js              || true   # 东东萌宠
+          node jd_joy.js              || true   # 疯狂Joy
+          node jd_superMarket.js      || true   # 东东超市
+          node jd_dreamFactory.js     || true   # 京喜工厂
+          node jd_jdzz.js             || true   # 京喜财富岛
+          node jd_crazy_joy.js        || true   # 疯狂的Joy
+          echo "========== 全部执行完毕 =========="
+
+      - name: 上传日志（方便查看）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jd-logs
+          path: ~/jdpro/*.log
