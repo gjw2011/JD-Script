@@ -1,0 +1,59 @@
+name: JD 京东脚本自动化
+
+on:
+  workflow_dispatch:  # 允许手动触发
+  schedule:
+    - cron: '0 0,8,16,20 * * *'  # 每天 0:00, 8:00, 16:00, 20:00 UTC 自动跑（北京时间 8:00, 16:00, 0:00, 4:00）
+
+jobs:
+  run-jd:
+    runs-on: ubuntu-latest
+    if: github.event.repository.fork  # 只在 Fork 仓库运行，避免原仓库滥用
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install requests
+        # 如果有其他依赖，这里加
+
+    - name: Run JD scripts
+      env:
+        JD_COOKIE: ${{ secrets.JD_COOKIE }}
+        # 如果需要推送，加 PUSH_KEY: ${{ secrets.PUSH_KEY }}
+      run: |
+        # 运行你仓库里的 Python 脚本（关注有礼）
+        cd getFollowGifts || echo "No getFollowGifts dir, skipping"
+        if [ -f "jd_getFollowGift.py" ]; then
+          python jd_getFollowGift.py
+        fi
+        
+        # 添加更多京东任务（用 Node.js 脚本，自动拉取最新）
+        cd .. || exit
+        curl -s https://raw.githubusercontent.com/6dylan6/jdpro/main/jd_cookie.js -o jd_cookie.js
+        node jd_cookie.js  # 示例：验证 Cookie
+        
+        # 全套京东任务（拉取热门脚本）
+        git clone https://github.com/6dylan6/jdpro.git temp_jdpro
+        cd temp_jdpro
+        node jd_bean_sign.js  # 签到
+        node jd_plantBean.js  # 农场
+        node jd_pet.js        # 萌宠
+        # 加更多：jd_joy.js, jd_superMarket.js 等
+        cd .. && rm -rf temp_jdpro
+
+    - name: Upload logs (optional)
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: jd-logs
+        path: |
+          *.log
+          /tmp/*.log
